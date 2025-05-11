@@ -235,6 +235,86 @@ class GeminiService {
   }
   
   /**
+   * LLM-based reconstruction of text that was transmitted through BPSK with bit errors
+   * @param originalText The original text before transmission (for context only)
+   * @param noisyText The received text with bit errors from BPSK transmission
+   * @param iterationNumber Optional iteration number for context
+   * @returns Reconstructed text
+   */
+  async reconstructTextFromPhysicalError(originalText: string, noisyText: string, iterationNumber?: number): Promise<string> {
+    try {
+      let prompt = `You are helping reconstruct data that was transmitted through a noisy physical channel. 
+      
+The original text was transmitted using Binary Phase-Shift Keying (BPSK) modulation and then corrupted by Additive White Gaussian Noise (AWGN), causing bit errors.
+
+For context, the general topic of the text is: "${originalText.slice(0, 30)}..."
+
+The received text with bit errors is:
+"${noisyText}"`;
+
+      // Add iteration context if available
+      if (iterationNumber && iterationNumber > 0) {
+        prompt += `\n\nThis is iteration #${iterationNumber} of the reconstruction process.`;
+      }
+
+      prompt += `\n\nPlease attempt to reconstruct the original text, fixing any bit errors that may have occurred during transmission. The errors will mostly be at the character level due to bit flips. If some part is incomprehensible, make your best educated guess.
+
+Provide only the reconstructed text, with no explanations or additional text.`;
+
+      // If no API key, return the noisy text with minor cleanup
+      if (!this.apiKey) {
+        console.warn('Using mock BPSK reconstruction - set API key for real results');
+        return this.simpleBPSKCleanup(noisyText);
+      }
+
+      const response = await axios.post(
+        `${this.apiUrl}/models/${this.generationModel}:generateContent?key=${this.apiKey}`,
+        {
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 1024,
+          }
+        }
+      );
+      
+      const reconstructedText = response.data.candidates[0].content.parts[0].text.trim();
+      return this.cleanResponse(reconstructedText);
+    } catch (error) {
+      console.error('Error reconstructing text from physical errors:', error);
+      return noisyText; // Return the noisy text if reconstruction fails
+    }
+  }
+
+  /**
+   * Simple cleanup of BPSK noisy text for mock use
+   */
+  private simpleBPSKCleanup(noisyText: string): string {
+    // This is a simple mock implementation that tries to fix common bit error patterns
+    return noisyText
+      .replace(/[^\x20-\x7E]/g, '') // Remove non-printable characters
+      .replace(/(\w)\1{3,}/g, '$1') // Remove excessive repeated characters
+      .trim();
+  }
+
+  /**
+   * Clean response text from LLM
+   */
+  private cleanResponse(text: string): string {
+    // Remove any quotes at beginning/end that might be in the LLM response
+    return text.replace(/^["']|["']$/g, '').trim();
+  }
+
+  /**
    * Simulate noise in a text (similar to the Python example's add_noise_to_text)
    */
   private simulateNoise(text: string, snr: number = 50): string {

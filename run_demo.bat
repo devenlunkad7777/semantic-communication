@@ -1,0 +1,6 @@
+@echo off
+echo Starting Semantic Flow Demo...
+python demo_flow.py
+echo.
+echo Press any key to exit...
+pause > nul

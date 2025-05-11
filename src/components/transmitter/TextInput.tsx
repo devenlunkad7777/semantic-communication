@@ -25,7 +25,7 @@ const TextInput: React.FC = () => {
     await dispatch(encodeText(localText) as any);
     
     // Process the semantic communication
-    await dispatch(processCommunication() as any);
+    await dispatch(processCommunication({ text: localText }) as any);
     
     // Automatically run the AWGN simulation with the new text
     await dispatch(runAwgnSimulation() as any);

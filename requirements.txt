@@ -1,6 +1,9 @@
+# filepath: c:\Users\deven\OneDrive\Desktop\6th SEM mini project\mini-main\requirements.txt
 flask>=3.1.0
 flask-cors>=5.0.1
 numpy>=2.2.5
 matplotlib>=3.8.0
 scipy>=1.15.2
 sentence-transformers>=4.1.0
+requests>=2.31.0
+python-dotenv>=1.0.0

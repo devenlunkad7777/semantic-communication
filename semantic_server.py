@@ -7,6 +7,9 @@ import subprocess
 import os
 import sys
 import threading
+import numpy as np  # Add NumPy import here
+import requests
+import json
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -64,23 +67,35 @@ def health_check():
 def home():
     return """
     <html>
-        <head><title>Sentence Transformer Similarity API</title></head>
+        <head><title>Semantic Communication Backend API</title></head>
         <body>
-            <h1>Sentence Transformer Similarity API</h1>
-            <p>This server calculates semantic similarity between texts using the sentence-transformers model.</p>
+            <h1>Semantic Communication Backend API</h1>
+            <p>This server provides various endpoints for semantic communication simulation.</p>
             <h2>API Endpoints</h2>
             <ul>
                 <li><strong>POST /calculate-similarity</strong> - Calculate similarity between original and received texts</li>
+                <li><strong>POST /bpsk-text-noise</strong> - Apply BPSK modulation and noise to text</li>
+                <li><strong>POST /reconstruct-text</strong> - Reconstruct text corrupted by noise</li>
+                <li><strong>POST /semantic-flow</strong> - Complete semantic communication flow</li>
                 <li><strong>GET /health</strong> - Health check endpoint</li>
+                <li><strong>GET /run-awgn-simulation</strong> - Launch AWGN simulation in a new window</li>
             </ul>
+            <h2>Semantic Flow Process</h2>
+            <ol>
+                <li>User enters a sentence, which is processed by an LLM</li>
+                <li>The LLM output is subjected to BPSK noise simulation</li>
+                <li>The noisy text is then reconstructed using an LLM</li>
+                <li>Similarity score is calculated between original input and reconstructed text</li>
+            </ol>
             <h2>Example Request</h2>
             <pre>
-            POST /calculate-similarity
+            POST /semantic-flow
             Content-Type: application/json
             
             {
-                "original_text": "Text input by user",
-                "received_text": "Text received after transmission"
+                "input_text": "This is a test message for semantic communication",
+                "ebno_db": 5.0,
+                "skip_initial_llm": false
             }
             </pre>
         </body>
@@ -184,11 +199,272 @@ def run_awgn_auto():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/bpsk-text-noise', methods=['POST', 'OPTIONS'])
+def bpsk_text_noise():
+    """Endpoint to simulate BPSK modulated text transmission with AWGN noise"""
+    # Handle preflight OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        # Get request data
+        data = request.json
+        text = data.get('text', "Hello, Semantic Communication!")
+        ebno_db = float(data.get('ebno_db', 10.0))
+        
+        # Import the BPSK text noise functions
+        from bpsk_text_noise import transmit_text_over_awgn
+        
+        # Simulate the transmission
+        text_rx, ber, bits_tx, bits_rx = transmit_text_over_awgn(text, ebno_db)
+        
+        # Return the results
+        return jsonify({
+            'status': 'success',
+            'original_text': text,
+            'received_text': text_rx,
+            'ber': float(ber),
+            'ebno_db': ebno_db,
+            'bit_count': len(bits_tx),
+            'error_bits': int(np.sum(bits_tx != bits_rx))
+        })
+    except Exception as e:
+        print(f"Error processing BPSK text noise request: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/reconstruct-text', methods=['POST', 'OPTIONS'])
+def reconstruct_text():
+    """Endpoint to reconstruct text that has been corrupted by noise using LLM"""
+    # Handle preflight OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        # Get request data
+        data = request.json
+        corrupted_text = data.get('corrupted_text', "")
+        original_text = data.get('original_text', "")  # Optional, for similarity calculation
+        
+        if not corrupted_text:
+            return jsonify({'error': 'corrupted_text is required'}), 400
+        
+        print(f"\n=== Text Reconstruction ===")
+        print(f"Corrupted Text: {corrupted_text}")
+        
+        # Reconstruct text - in a real implementation, this would call an LLM API
+        # For now, we'll use a simple mock implementation
+        
+        # Clean up obvious noise characters
+        cleaned_text = corrupted_text
+        for char in ['�', '�', '�', '�', '�']:
+            cleaned_text = cleaned_text.replace(char, '')
+            
+        # Apply reconstruction logic - in a real implementation this would use an LLM
+        reconstructed_text = f"Reconstructed: {cleaned_text}"
+        
+        # Strip any "Reconstructed: " prefix if it already exists (to avoid double prefixing)
+        if reconstructed_text.startswith("Reconstructed: "):
+            reconstructed_text = reconstructed_text[14:]
+            
+        print(f"Reconstructed Text: {reconstructed_text}")
+        
+        # Calculate similarity with original if provided
+        similarity = None
+        if original_text:
+            original_vec = model.encode([original_text])[0]
+            reconstructed_vec = model.encode([reconstructed_text])[0]
+            similarity = 1 - distance.cosine(original_vec, reconstructed_vec)
+            print(f"Similarity Score: {similarity:.5f}")
+        
+        response = {
+            'status': 'success',
+            'corrupted_text': corrupted_text,
+            'reconstructed_text': reconstructed_text
+        }
+        
+        if similarity is not None:
+            response['similarity'] = float(similarity)
+            response['original_text'] = original_text
+            
+        return jsonify(response)
+        
+    except Exception as e:
+        print(f"Error reconstructing text: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/semantic-flow', methods=['POST', 'OPTIONS'])
+def semantic_flow_endpoint():
+    """Endpoint to run the complete semantic communication flow:
+    1. Process input text with LLM (optional)
+    2. Add BPSK noise to text
+    3. Reconstruct with LLM
+    4. Calculate similarity
+    """
+    # Handle preflight OPTIONS request for CORS
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    try:
+        # Get request data
+        data = request.json
+        input_text = data.get('input_text', "Hello, Semantic Communication!")
+        ebno_db = float(data.get('ebno_db', 5.0))
+        skip_initial_llm = data.get('skip_initial_llm', False)
+        
+        print("\n" + "=" * 60)
+        print(" SEMANTIC COMMUNICATION FLOW ".center(60, "="))
+        print("=" * 60)
+        print(f"\n[STEP 1] User Input Text:")
+        print(f"\"{input_text}\"")
+        print(f"\nSignal-to-Noise Ratio (Eb/N0): {ebno_db} dB")        # Initial LLM processing (optional)
+        if not skip_initial_llm:
+            print("\n[STEP 2] LLM Processing:")
+            llm_processed = process_with_llm(input_text)  # Use our LLM processing function
+            print(f"\"{llm_processed}\"")
+        else:
+            llm_processed = input_text
+            print("\n[STEP 2] Skipping initial LLM processing")
+            print(f"Using original text: \"{llm_processed}\"")
+        
+        # Add BPSK noise
+        from bpsk_text_noise import transmit_text_over_awgn
+        print("\n[STEP 3] Adding BPSK noise:")
+        noisy_text, ber, bits_tx, bits_rx = transmit_text_over_awgn(llm_processed, ebno_db)
+        print(f"BPSK processed text: \"{noisy_text}\"")
+        print(f"Bit Error Rate: {ber:.5f}")
+        print(f"Total bits: {len(bits_tx)}")
+        print(f"Error bits: {int(np.sum(bits_tx != bits_rx))}")        # Step 4: Reconstruct the noisy text using LLM
+        print("\n[STEP 4] Reconstructing with LLM...")
+        
+        # This is where we send the BPSK noisy text directly to the LLM for reconstruction
+        reconstructed_text = reconstruct_with_llm(noisy_text)
+        
+        # For demonstration purposes, strip any "Reconstructed version of: " prefix
+        if reconstructed_text.startswith("Reconstructed version of: "):
+            reconstructed_text = reconstructed_text[24:]
+            
+        print("\n----- RECONSTRUCTION RESULT -----")
+        print(f"Original Input: {input_text}")
+        print(f"After BPSK:     {noisy_text}")
+        print(f"Reconstructed:  {reconstructed_text}")
+        print("--------------------------------")
+        
+        # Calculate similarity between original and reconstructed
+        # Using the sentence transformer model already loaded in this file
+        original_vec = model.encode([input_text])[0]
+        reconstructed_vec = model.encode([reconstructed_text])[0]
+        similarity = 1 - distance.cosine(original_vec, reconstructed_vec)
+        print(f"\nSimilarity score: {similarity:.5f}")
+        
+        # Return all results
+        return jsonify({
+            'status': 'success',
+            'input_text': input_text,
+            'llm_processed': llm_processed,
+            'noisy_text': noisy_text,
+            'reconstructed_text': reconstructed_text,
+            'similarity': float(similarity),
+            'ber': float(ber),
+            'ebno_db': ebno_db,
+            'error_bits': int(np.sum(bits_tx != bits_rx))
+        })
+        
+    except Exception as e:
+        print(f"Error processing semantic flow request: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 def run_server():
     """Function to start the Flask server"""
-    print("Starting server on http://localhost:5000")
-    print("Use the /calculate-similarity endpoint to get semantic similarity between texts")
-    app.run(debug=True, port=5000)
+    print("\n" + "=" * 70)
+    print(" SEMANTIC COMMUNICATION BACKEND SERVER ".center(70, "="))
+    print("=" * 70 + "\n")
+    print("Server is starting on http://localhost:5000")
+    print("\nTo test the semantic flow with default parameters, you can use:")
+    print("curl -X POST http://localhost:5000/semantic-flow -H \"Content-Type: application/json\" -d \"{\\\"input_text\\\": \\\"This is a test message\\\", \\\"ebno_db\\\": 5.0}\"")
+    print("\nOr access http://localhost:5000 in your browser for API documentation.")
+    print("\nPress Ctrl+C to stop the server.\n")
+    app.run(debug=False, port=5000)  # Set debug=False to reduce noise in output
+
+def reconstruct_with_llm(noisy_text):
+    """
+    Reconstruct the BPSK noisy text using an LLM.
+    In a production system, this would call an actual LLM API.
+    
+    Args:
+        noisy_text: Text that has been corrupted by noise
+        
+    Returns:
+        str: The reconstructed text
+    """
+    # First clean up obvious noise characters for cleaner prompt
+    cleaned_text = noisy_text
+    for char in ['�', '�', '�', '�', '�']:
+        cleaned_text = cleaned_text.replace(char, ' ')
+    
+    # In a real implementation, this would be the prompt for the LLM
+    prompt = f"""You are a text reconstruction specialist. You've received a message that was transmitted 
+over a noisy channel and contains errors or corrupted characters. 
+
+Your task is to reconstruct the original meaning of the message based on context and 
+semantic understanding. Do not add explanations or additional content - respond only 
+with your best reconstruction of the original message.
+
+Corrupted Message: "{cleaned_text}"
+"""
+    
+    print("\n[LLM RECONSTRUCTION PROMPT]")
+    print("-" * 60)
+    print(prompt)
+    print("-" * 60)
+    
+    # MOCK IMPLEMENTATION - In a real system, this would call an actual LLM API
+    # e.g., OpenAI API, Gemini API, or a local model
+    
+    # For demonstration, we'll just clean up the text and assume it's reconstructed
+    # In a real implementation, you'd replace this with an actual LLM API call:
+    # reconstructed_text = call_llm_api(prompt)
+    
+    reconstructed_text = f"Reconstructed version of: {cleaned_text}"
+    
+    return reconstructed_text
+
+def process_with_llm(input_text):
+    """
+    Process the input text with an LLM to extract semantic meaning.
+    In a production system, this would call an actual LLM API.
+    
+    Args:
+        input_text: Original text from the user
+        
+    Returns:
+        str: The processed text with extracted semantic meaning
+    """
+    # In a real implementation, this would be the prompt for the LLM
+    prompt = f"""You are a semantic communication processor. Your task is to extract the core meaning 
+from the following text without changing its essential information. Keep the same tone 
+and intent, but represent it in a way that preserves semantic content while potentially 
+allowing for communication efficiency. Respond with only the processed text, without 
+any explanations or additional comments.
+
+Input Text: "{input_text}"
+"""
+    
+    print("\n[LLM PROCESSING PROMPT]")
+    print("-" * 60)
+    print(prompt)
+    print("-" * 60)
+    
+    # MOCK IMPLEMENTATION - In a real system, this would call an actual LLM API
+    # For demonstration, we'll just assume it's processed
+    # In a real implementation, you'd replace this with an actual LLM API call:
+    # processed_text = call_llm_api(prompt)
+    
+    processed_text = f"Processed: {input_text}"
+    
+    return processed_text
 
 if __name__ == '__main__':
     run_server()
