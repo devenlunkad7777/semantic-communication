@@ -45,6 +45,7 @@ def bits_to_text(bits, encoding='utf-8', errors='replace'):
 def add_awgn_noise(signal, EbN0_dB):
     """Add AWGN noise to a BPSK signal for a given Eb/N0 in dB."""
     EbN0 = 10 ** (EbN0_dB / 10)
+    #Energy per bit (Eb) divided by Noise power spectral density (N₀).
     # For BPSK, Eb = 1 (since symbols are ±1), so noise variance = N0/2 = 1/(2*EbN0)
     noise_variance = 1 / (2 * EbN0)
     noise = np.sqrt(noise_variance) * np.random.randn(*signal.shape)
