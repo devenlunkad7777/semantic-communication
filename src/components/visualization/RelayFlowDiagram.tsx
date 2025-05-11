@@ -51,44 +51,46 @@ const RelayFlowDiagram: React.FC = () => {
         {/* Signal Path Lines */}
         {/* Base to Relay */}
         <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
-          <defs>
-            <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-                    refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#4B5563" className="dark:fill-gray-400" />
-            </marker>
-          </defs>
-          {/* Base to Relay Path */}
-          <path 
-            d="M 42 96 L 192 40" 
-            stroke="#4B5563" 
-            strokeWidth="2" 
-            strokeDasharray="5,5" 
-            className="dark:stroke-gray-400"
-            markerEnd="url(#arrowhead)" 
-            fill="none"
-          />
-          
-          {/* Base to Destination Direct Path */}
-          <path 
-            d="M 42 96 L 342 96" 
-            stroke="#4B5563" 
-            strokeWidth="2" 
-            className="dark:stroke-gray-400"
-            markerEnd="url(#arrowhead)" 
-            fill="none"
-          />
-          
-          {/* Relay to Destination Path */}
-          <path 
-            d="M 192 40 L 342 96" 
-            stroke="#4B5563" 
-            strokeWidth="2" 
-            strokeDasharray="5,5" 
-            className="dark:stroke-gray-400"
-            markerEnd="url(#arrowhead)" 
-            fill="none"
-          />
-        </svg>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+            refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4B5563" className="dark:fill-gray-400" />
+    </marker>
+  </defs>
+
+  {/* Base to Relay (dashed diagonal upward) */}
+  <path 
+    d="M 90 128 L 280 78" 
+    stroke="#4B5563" 
+    strokeWidth="2" 
+    strokeDasharray="5,5" 
+    className="dark:stroke-gray-400"
+    markerEnd="url(#arrowhead)" 
+    fill="none"
+  />
+
+  {/* Base to Destination (straight horizontal) */}
+  <path 
+    d="M 90 128 L 520 128" 
+    stroke="#4B5563" 
+    strokeWidth="2" 
+    className="dark:stroke-gray-400"
+    markerEnd="url(#arrowhead)" 
+    fill="none"
+  />
+
+  {/* Relay to Destination (diagonal downward) */}
+  <path 
+    d="M 335 78 L 520 128" 
+    stroke="#4B5563" 
+    strokeWidth="2" 
+    strokeDasharray="5,5" 
+    className="dark:stroke-gray-400"
+    markerEnd="url(#arrowhead)" 
+    fill="none"
+  />
+</svg>
+
 
         {/* Signal Animations */}
         <div className="signal-dot base-to-relay"></div>
@@ -145,21 +147,45 @@ const RelayFlowDiagram: React.FC = () => {
         }
         
         @keyframes baseToRelay {
-          0% { left: 42px; top: 96px; opacity: 1; }
-          50% { left: 116px; top: 68px; opacity: 1; }
-          100% { left: 192px; top: 40px; opacity: 0; }
-        }
-        
-        @keyframes baseToDestination {
-          0% { left: 42px; top: 96px; opacity: 1; }
-          100% { left: 342px; top: 96px; opacity: 0; }
-        }
-        
-        @keyframes relayToDestination {
-          0% { left: 192px; top: 40px; opacity: ${isDFMode ? 0 : 1}; }
-          50% { left: 266px; top: 68px; opacity: 1; }
-          100% { left: 342px; top: 96px; opacity: 0; }
-        }
+  0% {
+    left: 90px;
+    top: 128px;
+    opacity: 1;
+  }
+  100% {
+    left: 280px;
+    top: 78px;
+    opacity: 0;
+  }
+}
+
+@keyframes baseToDestination {
+  0% {
+    left: 90px;
+    top: 128px;
+    opacity: 1;
+  }
+  100% {
+    left: 520px;
+    top: 128px;
+    opacity: 0;
+  }
+}
+
+@keyframes relayToDestination {
+  0% {
+    left: 335px;
+    top: 78px;
+    opacity: 1;
+  }
+  100% {
+    left: 520px;
+    top: 128px;
+    opacity: 0;
+  }
+}
+
+
       `}</style>
     </div>
   );
