@@ -29,6 +29,18 @@ const Node: React.FC<NodeProps> = ({ label, x, y, active = false }) => {
     </div>
   );
 };
+interface Point {
+  x: number; // in percentage
+  y: number; // in percentage
+}
+
+interface LineProps {
+  from: Point;
+  to: Point;
+}
+const nodeRadius = 32; // since w-16 = 64px
+
+
 
 interface LineProps {
   from: { x: number; y: number };
@@ -36,26 +48,26 @@ interface LineProps {
 }
 
 const Line: React.FC<LineProps> = ({ from, to }) => {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
   return (
-    <div
-      className="absolute bg-gray-300 dark:bg-gray-600 transition-colors"
-      style={{
-        width: `${length}%`,
-        height: '2px',
-        left: `${from.x}%`,
-        top: `${from.y}%`,
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: 'left center',
-        zIndex: 1
-      }}
-    />
+    <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+      <line
+        x1={`${from.x}%`}
+        y1={`${from.y}%`}
+        x2={`${to.x}%`}
+        y2={`${to.y}%`}
+        stroke="gray"
+        strokeWidth="2"
+      />
+    </svg>
   );
 };
+
+
+
+
+
+
+
 
 interface PacketProps {
   from: { x: number; y: number };
@@ -101,12 +113,12 @@ const FlowDiagram: React.FC = () => {
     semanticSimilarity,
     similarityThreshold
   } = useSelector((state: RootState) => state.semantic);
+  const transmitterPos = { x: 20, y: 70 }; // TX bottom-left
+  const receiverPos = { x: 80, y: 70 };    // RX bottom-right
+  const relayPos = { x: 50, y: 30 };       // RELAY top-center
+  
 
-  // Adjusted positions for nodes - relay moved upward
-  const transmitterPos = { x: 20, y: 50 };
-  // The relay node is positioned higher (smaller y value means higher on screen)
-  const relayPos = { x: 50, y: 25 };
-  const receiverPos = { x: 80, y: 50 };
+  
 
   // Determine if relay is active
   const isRelayActive = transmissionMode === TransmissionMode.RELAY && 
