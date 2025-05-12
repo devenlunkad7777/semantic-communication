@@ -20,9 +20,10 @@ const AWGNPlotDisplay: React.FC<AWGNPlotDisplayProps> = ({ refreshTrigger = 0 })
   // Keep track of the last text we plotted to avoid unnecessary refreshes
   const [lastPlottedText, setLastPlottedText] = useState<string>('');
   const [lastPlottedSNR, setLastPlottedSNR] = useState<number>(0);
-  
-  // Define the backend URL - this is the Flask server address
-  const BACKEND_URL = 'http://localhost:5000';
+    // Define the backend URL - auto-detect whether using localhost or network address
+  const BACKEND_URL = window.location.hostname === 'localhost' ? 
+    'http://localhost:5000' : 
+    `http://${window.location.hostname}:5000`;
 
   // Fetch the plot whenever refreshTrigger changes or input text or SNR value changes
   useEffect(() => {

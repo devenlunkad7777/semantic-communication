@@ -108,9 +108,14 @@ def serve_awgn_plot():
 
 def run_server():
     """Function to start the Flask server"""
-    print("Starting server on http://localhost:5000")
+    import socket
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    
+    print(f"Starting server on http://localhost:5000 (local access)")
+    print(f"Server is also accessible on http://{ip_address}:5000 (network access)")
     print("Use the /calculate-similarity endpoint to get semantic similarity between texts")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000, host='0.0.0.0')  # Bind to all network interfaces
 
 if __name__ == '__main__':
     run_server()

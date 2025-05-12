@@ -8,6 +8,16 @@ import {
   SemanticVector 
 } from '../utils/semanticEmbedding';
 
+// Helper function to determine backend URL dynamically
+const getBackendUrl = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.hostname === 'localhost' ? 
+      'http://localhost:5000' : 
+      `http://${window.location.hostname}:5000`;
+  }
+  return 'http://localhost:5000'; // Default fallback
+};
+
 const initialState: SemanticState = {
   inputText: '',
   originalVector: null,
@@ -126,7 +136,7 @@ export const processCommunication = createAsyncThunk(
     
     try {
       // Run BPSK text transmission simulation with the current Eb/N0 value
-      const BACKEND_URL = 'http://localhost:5000';
+      const BACKEND_URL = getBackendUrl();
       const bpskResponse = await fetch(`${BACKEND_URL}/bpsk-text-noise`, {
         method: 'POST',
         headers: {
@@ -183,8 +193,7 @@ export const processCommunication = createAsyncThunk(
           } catch (error) {
             console.error('Error in DF relay processing:', error);
           }
-        } else {
-          // Amplify-and-Forward (AF) Mode:
+        } else {          // Amplify-and-Forward (AF) Mode:
           // Apply path loss based on distance and amplify
           
           // Calculate path loss based on distance and exponent
@@ -192,7 +201,8 @@ export const processCommunication = createAsyncThunk(
           const pathLossFactorRD = Math.pow(currentState.distanceRD, -currentState.pathLossExponent);
           
           // Apply path loss to relay vector (simulated by increasing noise variance)
-          const relayPathLossNoise = currentState.noiseVariance * (1 + (1 - pathLossFactorBR));
+          // Consider both paths: Base-to-Relay and Relay-to-Destination
+          const relayPathLossNoise = currentState.noiseVariance * (1 + (1 - pathLossFactorBR * pathLossFactorRD));
           
           // For AF mode, the relay just amplifies (which we simulate by slightly reducing the noise)
           const amplificationFactor = 1 / Math.sqrt(relayPathLossNoise + currentState.noisePower);
@@ -291,7 +301,7 @@ export const runAwgnSimulation = createAsyncThunk(
       const inputText = state.inputText || "Hello, Semantic Communication!";
       const snrValue = state.snrValue; // Use the SNR value directly from state
       
-      const BACKEND_URL = 'http://localhost:5000';
+      const BACKEND_URL = getBackendUrl();
       
       // Ensure we're always sending a valid JSON object
       const requestData = {

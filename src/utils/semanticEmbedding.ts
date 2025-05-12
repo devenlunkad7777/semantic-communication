@@ -277,10 +277,14 @@ export const calculateModelBasedSimilarity = async (
   console.log(`Requesting similarity calculation from Python backend:`);
   console.log(`Original Text: "${text1}"`);
   console.log(`Received Text: "${text2}"`);
-
   try {
-    // Communicate with the local Python Flask server using the correct parameter names
-    const response = await fetch('http://localhost:5000/calculate-similarity', {
+    // Determine the API URL based on current hostname
+    const BACKEND_URL = window.location.hostname === 'localhost' ? 
+      'http://localhost:5000' : 
+      `http://${window.location.hostname}:5000`;
+      
+    // Communicate with the Python Flask server using the correct parameter names
+    const response = await fetch(`${BACKEND_URL}/calculate-similarity`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 

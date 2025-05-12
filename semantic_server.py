@@ -378,15 +378,22 @@ def semantic_flow_endpoint():
 
 def run_server():
     """Function to start the Flask server"""
+    import socket
     print("\n" + "=" * 70)
     print(" SEMANTIC COMMUNICATION BACKEND SERVER ".center(70, "="))
     print("=" * 70 + "\n")
-    print("Server is starting on http://localhost:5000")
+    
+    # Get the local IP address
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    
+    print(f"Server is starting on http://localhost:5000 (local access)")
+    print(f"Server is also accessible on http://{ip_address}:5000 (network access)")
     print("\nTo test the semantic flow with default parameters, you can use:")
     print("curl -X POST http://localhost:5000/semantic-flow -H \"Content-Type: application/json\" -d \"{\\\"input_text\\\": \\\"This is a test message\\\", \\\"ebno_db\\\": 5.0}\"")
     print("\nOr access http://localhost:5000 in your browser for API documentation.")
     print("\nPress Ctrl+C to stop the server.\n")
-    app.run(debug=False, port=5000)  # Set debug=False to reduce noise in output
+    app.run(debug=False, port=5000, host='0.0.0.0')  # Bind to all network interfaces
 
 def reconstruct_with_llm(noisy_text):
     """
